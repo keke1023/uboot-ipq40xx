@@ -45,14 +45,20 @@ unsigned long hex2int(const char *a, unsigned int len) {
 	return val;
 }
 int do_checkout_firmware(void) {
-	if (CHECK_ADDR(0x880001fe, 0x55) && CHECK_ADDR(0x880001ff, 0xAA)) {
+	/*
+	 * 偏移以上传缓冲起点为基准，不能写死 0x88000xxx：
+	 * 128MiB 机型（WD1200G）的缓冲在 0x84000000，且 0x880001fe 本身
+	 * 就在 RAM 之外，裸解引用会 data abort。
+	 */
+	if (CHECK_ADDR(WEBFAILSAFE_UPLOAD_RAM_ADDRESS + 0x1fe, 0x55) &&
+	    CHECK_ADDR(WEBFAILSAFE_UPLOAD_RAM_ADDRESS + 0x1ff, 0xAA)) {
 		return FW_TYPE_OPENWRT_EMMC;
 	}
-	if (CHECK_ADDR(0x8800005c, 0x46) && // 'F'
-		CHECK_ADDR(0x8800005d, 0x6c) && // 'l'
-		CHECK_ADDR(0x8800005e, 0x61) && // 'a'
-		CHECK_ADDR(0x8800005f, 0x73) && // 's'
-		CHECK_ADDR(0x88000060, 0x68)) { // 'h'
+	if (CHECK_ADDR(WEBFAILSAFE_UPLOAD_RAM_ADDRESS + 0x5c, 0x46) && // 'F'
+		CHECK_ADDR(WEBFAILSAFE_UPLOAD_RAM_ADDRESS + 0x5d, 0x6c) && // 'l'
+		CHECK_ADDR(WEBFAILSAFE_UPLOAD_RAM_ADDRESS + 0x5e, 0x61) && // 'a'
+		CHECK_ADDR(WEBFAILSAFE_UPLOAD_RAM_ADDRESS + 0x5f, 0x73) && // 's'
+		CHECK_ADDR(WEBFAILSAFE_UPLOAD_RAM_ADDRESS + 0x60, 0x68)) { // 'h'
 		return FW_TYPE_QSDK;
 	}
 	return FW_TYPE_OPENWRT;
@@ -525,7 +531,10 @@ void board_names_init()
 #if defined(IPQ40XX_DAP2610)
 		openwrt_firmware_size=0xdc0000;
 #elif defined(IPQ40XX_WD1200G)
-		openwrt_firmware_size=0x0e80000;
+		/* 32MiB SPI-NOR：0x180000 + 0x1E80000 = 0x2000000，正好到芯片末尾。
+		 * 上游原值 0x0E80000(14.5MiB) 是原厂 16MiB 布局，Web 界面刷 30.5MiB
+		 * 固件会在 check 阶段被 "Firmware oversize" 拒掉。 */
+		openwrt_firmware_size=0x1e80000;
 #elif defined(IPQ40XX_EMR3500)
 		openwrt_firmware_size=0x1e00000;
 #elif defined(IPQ40XX_ENS620EXT)
