@@ -531,10 +531,11 @@ void board_names_init()
 #if defined(IPQ40XX_DAP2610)
 		openwrt_firmware_size=0xdc0000;
 #elif defined(IPQ40XX_WD1200G)
-		/* 32MiB SPI-NOR：0x180000 + 0x1E80000 = 0x2000000，正好到芯片末尾。
-		 * 上游原值 0x0E80000(14.5MiB) 是原厂 16MiB 布局，Web 界面刷 30.5MiB
-		 * 固件会在 check 阶段被 "Firmware oversize" 拒掉。 */
-		openwrt_firmware_size=0x1e80000;
+		/* 原厂 16MiB SPI-NOR 布局：0x180000 + 0xE80000 = 0x1000000，正好到芯片末尾。
+		 * 与上游默认值相同，这里保留显式分支，只为和 wd1200g-32m 分支形成对照；
+		 * 32MiB 版该值为 0x1E80000（0x180000 + 0x1E80000 = 0x2000000）。
+		 * Web 刷机时 httpd 用该值做 "Firmware oversize" 校验，必须与实际分区等长。 */
+		openwrt_firmware_size=0xe80000;
 #elif defined(IPQ40XX_EMR3500)
 		openwrt_firmware_size=0x1e00000;
 #elif defined(IPQ40XX_ENS620EXT)
